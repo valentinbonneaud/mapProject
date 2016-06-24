@@ -37,7 +37,7 @@ class Point
 		return $this->_ele;
 	}
 
-	public function getdate()
+	public function getDate()
 	{
 		return $this->_date;
 	}

@@ -2,7 +2,8 @@
 <html>
 
 	<head>
- <meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
+		<title>My hikes !</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /> 
 		<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
 
 		<style type="text/css">
@@ -15,13 +16,15 @@
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
 	   
 		<!-- Latest compiled and minified CSS -->
-		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+		<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
 
 		<!-- Optional theme -->
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css">
 
+		<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-T8Gy5hrqNKT+hzMclPo118YTQO6cYprQmhrYwIiQ/3axmI1hQomh7Ud2hPOy8SP1" crossorigin="anonymous">
+
 		<!-- Latest compiled and minified JavaScript -->
-		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
 
 		<script src="flot/jquery.flot.js"></script>
 		<script src="flot/jquery.flot.tooltip.min.js"></script>
@@ -33,14 +36,13 @@
 
 			<?php
 
-				include_once 'Trip.php';
 				include_once 'TripTracker.php';
 				include_once "GPS.php";
 
 				// Extract the trips from the tracker (more more dots)
 
 
-				$dir = "/var/www/bonneaud/maps/gpx";
+				$dir = "/var/www/bonneaud/randos/gpx";
 
 				$dh  = opendir($dir);
 				while (false !== ($filename = readdir($dh))) 
@@ -73,6 +75,10 @@
 							$stops[]=floatval($pos['lat']);
 							$stops[]=floatval($pos['lon']);
 							$stops[]=floatval($pos->ele);
+							if($pos->time != "")
+								$stops[] = strtotime($pos->time);
+							else
+								$stops[]=0;
 							$i++;
 						}
 					}
@@ -89,6 +95,7 @@
 					$trip = $trips[$i];
 					$trip->printItineraire();
 					$trip->getElevation();
+					$trip->getSpeed();
 				}
 
 			?>
@@ -112,9 +119,15 @@
 				$("#tripList").html("")
 	
 				$.each(trips, function(key, value) {
+
+					var icons = ""
+
+					if(value.hasElevation) icons = '<i class="fa fa-area-chart" aria-hidden="true"></i>'
+					if(value.hasSpeed) icons += '<i class="fa fa-tachometer" style="padding-left: 10px;" aria-hidden="true"></i>'
+
 					var line = '<div class="panel panel-default">';
 					line += '    <div class="panel-heading">';
-					line += '        <h3 class="panel-title"><a href="#'+value.idRando+'" class="linkRando" idArray="'+value.idRando+'">'+value.title+' <i class="fa fa-caret-down" aria-hidden="true"></i></a></h3>';
+					line += '        <h3 class="panel-title"><a href="#'+value.idRando+'" class="linkRando" idArray="'+value.idRando+'">'+value.title+' <i class="fa fa-caret-down" aria-hidden="true"></i><span style="float: right;">'+icons+'</span></a></h3>';
 					line += '    </div> ';
 					line += '    <div id="'+value.idRando+'_div" class="panel-body panelRando hidden"> ';
 					line += value.description+'<br/><br />';
@@ -137,7 +150,7 @@
 //					e.preventDefault();
 					$(".panelRando").addClass("hidden")
 					$("#"+$(this).attr("idArray")+"_div").removeClass("hidden")
-					initializeRando(window[$(this).attr("idArray")], window["elevation_"+$(this).attr("idArray")])
+					initializeRando(window[$(this).attr("idArray")], window["elevation_"+$(this).attr("idArray")], window["speed_"+$(this).attr("idArray")])
 				})
 
 				var url = $(location).attr('href');
@@ -146,13 +159,13 @@
 					console.log(lm[1])
 					$(".panelRando").addClass("hidden")
 					$("#"+lm[1]+"_div").removeClass("hidden")
-					initializeRando(window[lm[1]], window["elevation_"+lm[1]])
+					initializeRando(window[lm[1]], window["elevation_"+lm[1]], window["speed_"+lm[1]])
 				} else {
 					initialize()
 				}
 			})
 
-			function initializeRando(trip, elevation) {
+			function initializeRando(trip, elevation, speed) {
 
 				$("#graphAltitude").removeClass("hidden")
 
@@ -162,7 +175,7 @@
 				};
 				var map = new google.maps.Map(document.getElementById("map-canvas"),mapOptions);
 
-				traceTracker(trip, elevation, map);
+				traceTracker(trip, elevation, speed, map);
 	
 				var bounds = new google.maps.LatLngBounds();
 
@@ -199,7 +212,7 @@
 					google.maps.event.addListener( marker, 'click', function(e) {
 						$(".panelRando").addClass("hidden")
 	                                        $("#"+value.idRando+"_div").removeClass("hidden")
-        	                                initializeRando(window[value.idRando], window["elevation_"+value.idRando])
+        	                                initializeRando(window[value.idRando], window["elevation_"+value.idRando], window["speed_"+value.idRando])
 				        });
 				   
 					marker.setMap(map);
@@ -213,9 +226,8 @@
 
 			var markerOnMap = null
 
-			function traceTracker(flightPlanCoordinates, elevation, map) 
+			function traceTracker(flightPlanCoordinates, elevation, speed, map) 
 			{
-
 				for(i = 0; i < flightPlanCoordinates.length-1; i++)
 				{
 					var flightPath = new google.maps.Polyline({
@@ -237,42 +249,102 @@
 
 				position = "right"
 
-				$.plot($("#flot-line-chart-multi"), [{
-					data: elevation
-				},], {
-					xaxes: [ {}],
-					yaxes: [{ }, {
-						// align if we are to the right
-						alignTicksWithAxis: position == "right" ? 1 : null,
-						position: position,
-						tickFormatter: euroFormatter
-					}],
-					legend: {
-						position: 'sw'
-					},
-					colors: ["#1ab394"],
-					grid: {
-						color: "#999999",
-						hoverable: true,
-						clickable: true,
-						tickColor: "#D4D4D4",
-						borderWidth:0,
-						hoverable: true //IMPORTANT! this is needed for tooltip to work,
-					},
-					tooltip: true,
-					tooltipOpts: {
-						content: "Altitude : %y m @ %x km",
-						//xDateFormat: "%y-%0m-%0d",
+				if(speed == undefined) {
 
-						onHover: function(flotItem, $tooltipEl) {
-							if(markerOnMap != null) markerOnMap.setMap(null)
+					$.plot($("#flot-line-chart-multi"), [{
+						data: elevation
+					},], {
+						xaxes: [ {}],
+						yaxes: [{ }, {
+							// align if we are to the right
+							alignTicksWithAxis: position == "right" ? 1 : null,
+							position: position,
+							tickFormatter: euroFormatter
+						}],
+						legend: {
+							position: 'sw'
+						},
+						colors: ["#1ab394"],
+						grid: {
+							color: "#999999",
+							hoverable: true,
+							clickable: true,
+							tickColor: "#D4D4D4",
+							borderWidth:0,
+							hoverable: true //IMPORTANT! this is needed for tooltip to work,
+						},
+						tooltip: true,
+						tooltipOpts: {
+							content: "Altitude : %y m @ %x km",
+							//xDateFormat: "%y-%0m-%0d",
+	
+							onHover: function(flotItem, $tooltipEl) {
+								if(markerOnMap != null) markerOnMap.setMap(null)
+									markerOnMap = new google.maps.Marker({
+										position: flightPlanCoordinates[flotItem['dataIndex']],
+										map: map
+									});
+							}
+						}
+					});
+				
+				} else {
+					
+					$.plot($("#flot-line-chart-multi"), [{
+						data: elevation,
+						label: 'elevation',
+					},
+					{
+						data: speed,
+						yaxis: 2,
+						label: 'speed',
+					}], {
+						xaxes: [ {}],
+						yaxes: [{}, {
+							// align if we are to the right
+							alignTicksWithAxis: position == "right" ? 1 : null,
+							position: position,
+						}],
+						legend: {
+							position: 'sw'
+						},
+						colors: ["#1ab394"],
+						grid: {
+							color: "#999999",
+							hoverable: true,
+							clickable: true,
+							tickColor: "#D4D4D4",
+							borderWidth:0,
+							hoverable: true //IMPORTANT! this is needed for tooltip to work,
+						},
+						tooltip: true,
+						tooltipOpts: {
+							content: function(flotItem, $tooltipEl) {
+									if(flotItem == "elevation")
+										return "Altitude : %y m @ %x km"
+	
+									return "Speed : %y km/h @ %x km"
+								},
+							//xDateFormat: "%y-%0m-%0d",
+	
+							onHover: function(flotItem, $tooltipEl) {
+								if(markerOnMap != null) markerOnMap.setMap(null)
+
+								var indexArray = flotItem['dataIndex']
+
+								if(flotItem['series']['label'] == "speed") {
+									indexArray = elevation.map(function(el){return el[0];}).indexOf(flotItem['datapoint'][0])
+								}
+
 								markerOnMap = new google.maps.Marker({
-									position: flightPlanCoordinates[flotItem['dataIndex']],
+									position: flightPlanCoordinates[indexArray],
 									map: map
 								});
+							}
 						}
-					}
-				});
+					});
+
+				}
 
 			}
 		</script>

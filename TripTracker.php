@@ -18,9 +18,9 @@ class TripTracker
 		$this->_nom = $nom;
 		$this->_year = $year;
 
-		for($i=0;$i < count($tab);$i=$i+3)
+		for($i=0;$i < count($tab);$i=$i+4)
 		{
-			$this->_points[] = new Point($tab[$i],$tab[$i+1],"",$tab[$i+2], $year);
+			$this->_points[] = new Point($tab[$i],$tab[$i+1],"",$tab[$i+2], $tab[$i+3]);
 			$this->_nb++;
 		}
 	}
@@ -31,6 +31,22 @@ class TripTracker
                 $this->_year = $data['year'];
 		$this->_data = $data;
         }
+
+	public function hasElevation() {
+
+		for($i=0;$i<$this->_nb;$i++)
+                {
+                        if($this->_points[$i]->getEle() != 0) return 1;
+                }
+
+		return 0;
+
+	}
+
+	public function hasSpeed() {
+		if($this->_points[0]->getDate() != 0) return 1;
+		return 0;
+	}
 
 	public function getDistance()
 	{
@@ -44,7 +60,7 @@ class TripTracker
 		return round($total,1);
 	}
 
-	public function getDistanceBetween($nb) {
+	public function getDistanceBetween($nb, $round = true) {
 
 
 		if($nb <= 0) return 0;
@@ -54,7 +70,10 @@ class TripTracker
 		$p2 = $this->_points[$nb];
 		$total = GPS::getDistance($p1->getLat(),$p1->getLon(),$p2->getLat(),$p2->getLon());
 
-                return round($total,3);
+		if($round)
+	                return round($total,3);
+
+		return $total;
 
 	}
 
@@ -88,9 +107,9 @@ class TripTracker
 
 		for($i=0;$i<$this->_nb;$i++)
 		{
-			$total += $this->getDistanceBetween($i);
+			$total += $this->getDistanceBetween($i, false);
 			$point = $this->_points[$i];
-			echo "[".$total.",".$point->getEle()."]";
+			echo "[".round($total,3).",".$point->getEle()."]";
 			
 			if($i != $this->_nb-1)
 			{
@@ -100,6 +119,53 @@ class TripTracker
 
 		echo "];\n\n";
 
+	}
+
+
+	private function calculate_average($arr) {
+
+		$total = 0;
+		$count = count($arr);
+
+		foreach ($arr as $value) {
+			$total += $value;
+		}
+
+		$average = ($total/$count);
+		return $average;
+	}
+
+
+	public function getSpeed() {
+
+		if($this->_points[0]->getDate() == 0) return;
+
+		echo "var speed_tripTo".$this->_nom." = [ [0,0], ";
+		$total = 0;
+		$arraySpeeds = array();
+
+		for($i=1;$i<$this->_nb;$i++) {
+			$d = $this->getDistanceBetween($i, false);
+			$total += $d;
+			$t = $this->_points[$i]->getDate() - $this->_points[$i-1]->getDate();
+			if($t > 0) {
+				$s = round($d*1000.0/($t)*3.6, 2);
+
+				// we compute the 4 items moving average to smooth the speed
+				if(sizeof($arraySpeeds) > 4) array_shift($arraySpeeds);
+
+				array_push($arraySpeeds, $s);
+
+				echo "[".round($total,3).",".round($this->calculate_average($arraySpeeds), 2)."]";
+
+				if($i != $this->_nb-1)
+				{
+					echo ",";
+				}
+			}
+		}
+
+		echo "];\n\n";
 	}
 
 	public function getObjectJS($nameObj) {
@@ -114,6 +180,8 @@ class TripTracker
 		$str .= $nameObj.".".$name.".length = '" . $this->getDistance() ."km';";
 		$str .= $nameObj.".".$name.".duration = '" .$this->_data['duration']. "';";
 		$str .= $nameObj.".".$name.".medium = '".$this->_data['medium']."';";
+		$str .= $nameObj.".".$name.".hasElevation = ".$this->hasElevation().";";
+		$str .= $nameObj.".".$name.".hasSpeed = ".$this->hasSpeed().";";
 
 		return $str;
 	}
