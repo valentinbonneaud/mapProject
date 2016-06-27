@@ -168,6 +168,57 @@ class TripTracker
 		echo "];\n\n";
 	}
 
+
+	public function getAll() {
+
+		echo "var all_".$this->_nom." = [ ";
+
+		$timeStart = $this->_points[0]->getDate();
+		$total = 0;
+                $arraySpeeds = array();
+
+		for($i=0;$i<$this->_nb;$i++) {
+			$d = $this->getDistanceBetween($i, false);
+
+			echo "{'distance':".round($total,3).", 'latitude':".$this->_points[$i]->getLat().", 'longitude':".$this->_points[$i]->getLon();
+
+			$total += $d;
+
+			if($timeStart > 0) {
+
+				if($i == 0) {
+
+					echo ", 'time':0, 'speed':0";
+
+				} else {
+
+					$t = $this->_points[$i]->getDate() - $this->_points[$i-1]->getDate();
+					if($t > 0) {
+						$s = round($d*1000.0/($t)*3.6, 2);
+
+						// we compute the 4 items moving average to smooth the speed
+						if(sizeof($arraySpeeds) > 4) array_shift($arraySpeeds);
+
+						array_push($arraySpeeds, $s);
+
+						echo ",'time':".($this->_points[$i]->getDate() - $timeStart).", 'speed':".round($this->calculate_average($arraySpeeds), 2);
+		                        }
+
+				}
+
+			}
+
+			echo "}";
+
+			if($i != $this->_nb-1) echo ",";
+
+                }
+
+
+		echo "];\n\n";
+
+	}
+
 	public function getObjectJS($nameObj) {
 
 		$name = $this->getName();

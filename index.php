@@ -34,6 +34,9 @@
 
 		<script type="text/javascript">
 
+			var labelSpeed = "Speed [km/h]"
+			var labelAltitude = "Elevation [m]"
+
 			<?php
 
 				include_once 'TripTracker.php';
@@ -96,12 +99,19 @@
 					$trip->printItineraire();
 					$trip->getElevation();
 					$trip->getSpeed();
+					$trip->getAll();
 				}
 
 			?>
 
-			var trips = {};
 
+			function euroFormatter(v, axis) {
+				return v.toFixed(axis.tickDecimals)+"km" ;
+			}
+
+
+			var trips = {};
+			var currentTrip, currentEle, currentSpeed, currentMap;
 			$( document ).ready(function() {
 
 				<?php
@@ -117,7 +127,7 @@
 				?>
 	
 				$("#tripList").html("")
-	
+
 				$.each(trips, function(key, value) {
 
 					var icons = ""
@@ -165,6 +175,223 @@
 				}
 			})
 
+function setLinkSpeed() {
+			$("#linkSpeed").click(function(e) {
+				e.preventDefault()
+
+				if($(this).html() == "Hide speed") {
+					$(this).html("Show speed")
+
+					$.plot($("#flot-line-chart-multi"), [{
+							data: currentElevation,
+							label: labelAltitude
+						},], {
+							xaxes: [ {}],
+							yaxes: [{ }, {
+							// align if we are to the right
+							alignTicksWithAxis: 1,
+							position: "right",
+							tickFormatter: euroFormatter
+						}],
+						legend: {
+							position: 'sw'
+						},
+						colors: ["#1ab394"],
+						grid: {
+							color: "#999999",
+							hoverable: true,
+							clickable: true,
+							tickColor: "#D4D4D4",
+							borderWidth:0,
+							hoverable: true //IMPORTANT! this is needed for tooltip to work,
+						},
+						tooltip: true,
+						tooltipOpts: {
+							content: "Altitude : %y m @ %x km",
+
+							onHover: function(flotItem, $tooltipEl) {
+								if(markerOnMap != null) markerOnMap.setMap(null)
+								markerOnMap = new google.maps.Marker({
+									position: currentTrip[flotItem['dataIndex']],
+									map: currentMap
+								});
+							}
+						}
+					});
+
+
+				} else {
+					$(this).html("Hide speed")
+
+					$.plot($("#flot-line-chart-multi"), [{
+							data: currentElevation,
+							label: labelAltitude,
+						}, {
+							data: currentSpeed,
+							yaxis: 2,
+							label: labelSpeed,
+						}], {
+							xaxes: [ {}],
+							yaxes: [{}, {
+								// align if we are to the right
+								alignTicksWithAxis: 1,
+								position: "right"
+							}],
+							legend: {
+								position: 'sw'
+							},
+							colors: ["#1ab394"],
+							grid: {
+								color: "#999999",
+								hoverable: true,
+								clickable: true,
+								tickColor: "#D4D4D4",
+								borderWidth:0,
+								hoverable: true //IMPORTANT! this is needed for tooltip to work,
+							},
+							tooltip: true,
+							tooltipOpts: {
+								content: function(flotItem, $tooltipEl) {
+									if(flotItem == labelAltitude)
+										return "Altitude : %y m @ %x km"
+
+									return "Speed : %y km/h @ %x km"
+								},
+
+								onHover: function(flotItem, $tooltipEl) {
+									if(markerOnMap != null) markerOnMap.setMap(null)
+
+									var indexArray = flotItem['dataIndex']
+
+									if(flotItem['series']['label'] == labelSpeed) {
+										indexArray = currentElevation.map(function(el){return el[0];}).indexOf(flotItem['datapoint'][0])
+									}
+
+									markerOnMap = new google.maps.Marker({
+										position: currentTrip[indexArray],
+										map: currentMap
+									});
+								}
+							}
+						});
+					}
+				})
+
+
+}
+
+function setLinkElevation() {
+			$("#linkEle").click(function(e) {
+				e.preventDefault()
+
+				if($(this).html() == "Hide elevation") {
+					$(this).html("Show elevation")
+
+					$.plot($("#flot-line-chart-multi"), [{
+							data: currentSpeed,
+							label: labelSpeed
+						},], {
+							xaxes: [ {}],
+							yaxes: [{ }, {
+							// align if we are to the right
+							alignTicksWithAxis: 1,
+							position: "right",
+							tickFormatter: euroFormatter
+						}],
+						legend: {
+							position: 'sw'
+						},
+						colors: ["#1ab394"],
+						grid: {
+							color: "#999999",
+							hoverable: true,
+							clickable: true,
+							tickColor: "#D4D4D4",
+							borderWidth:0,
+							hoverable: true //IMPORTANT! this is needed for tooltip to work,
+						},
+						tooltip: true,
+						tooltipOpts: {
+							content: "Altitude : %y m @ %x km",
+
+							onHover: function(flotItem, $tooltipEl) {
+								if(markerOnMap != null) markerOnMap.setMap(null)
+
+								var indexArray = flotItem['dataIndex']
+
+								if(flotItem['series']['label'] == labelSpeed) {
+									indexArray = currentElevation.map(function(el){return el[0];}).indexOf(flotItem['datapoint'][0])
+								}
+
+								markerOnMap = new google.maps.Marker({
+									position: currentTrip[indexArray],
+									map: currentMap
+								});
+							}
+						}
+					});
+
+
+				} else {
+					$(this).html("Hide elevation")
+
+					$.plot($("#flot-line-chart-multi"), [{
+							data: currentElevation,
+							label: labelAltitude
+						}, {
+							data: currentSpeed,
+							yaxis: 2,
+							label: labelSpeed,
+						}], {
+							xaxes: [ {}],
+							yaxes: [{}, {
+								// align if we are to the right
+								alignTicksWithAxis: 1,
+								position: "right"
+							}],
+							legend: {
+								position: 'sw'
+							},
+							colors: ["#1ab394"],
+							grid: {
+								color: "#999999",
+								hoverable: true,
+								clickable: true,
+								tickColor: "#D4D4D4",
+								borderWidth:0,
+								hoverable: true //IMPORTANT! this is needed for tooltip to work,
+							},
+							tooltip: true,
+							tooltipOpts: {
+								content: function(flotItem, $tooltipEl) {
+									if(flotItem == labelAltitude)
+										return "Altitude : %y m @ %x km"
+
+									return "Speed : %y km/h @ %x km"
+								},
+
+								onHover: function(flotItem, $tooltipEl) {
+									if(markerOnMap != null) markerOnMap.setMap(null)
+
+									var indexArray = flotItem['dataIndex']
+
+									if(flotItem['series']['label'] == labelSpeed) {
+										indexArray = currentElevation.map(function(el){return el[0];}).indexOf(flotItem['datapoint'][0])
+									}
+
+									markerOnMap = new google.maps.Marker({
+										position: currentTrip[indexArray],
+										map: currentMap
+									});
+								}
+							}
+						});
+					}
+				})
+
+
+}
+
 			function initializeRando(trip, elevation, speed) {
 
 				$("#graphAltitude").removeClass("hidden")
@@ -183,6 +410,11 @@
 				{
 					bounds.extend(trip[i]);
 				}
+
+				currentTrip = trip
+				currentElevation = elevation
+				currentSpeed = speed
+				currentMap = map
 	
 				map.fitBounds(bounds);
 				map.panToBounds(bounds);
@@ -241,18 +473,17 @@
 					flightPath.setMap(map); 
 				}
 
-
-
-				function euroFormatter(v, axis) {
-					return v.toFixed(axis.tickDecimals)+"km" ;
-				}
-
 				position = "right"
 
 				if(speed == undefined) {
 
+					$("#linksGraph").css("height","10%")
+					$("#linksGraph").html("<a style='padding-right: 6px;' id='linkTime' href=''>Time</a>")
+					$("#container_graph").css("height","90%")
+
 					$.plot($("#flot-line-chart-multi"), [{
-						data: elevation
+						data: elevation,
+						label: labelElevation
 					},], {
 						xaxes: [ {}],
 						yaxes: [{ }, {
@@ -289,15 +520,20 @@
 					});
 				
 				} else {
-					
+
+					$("#linksGraph").css("height","10%")
+					$("#linksGraph").html("<a style='padding-right: 6px;' id='linkSpeed' href=''>Hide speed</a><a style='padding-right: 6px;' id='linkEle' href=''>Hide elevation</a><a style='padding-right: 6px;' id='linkTime' href=''>Time</a>")
+					$("#container_graph").css("height","90%")
+	setLinkSpeed()				
+	setLinkElevation()
 					$.plot($("#flot-line-chart-multi"), [{
 						data: elevation,
-						label: 'elevation',
+						label: labelAltitude,
 					},
 					{
 						data: speed,
 						yaxis: 2,
-						label: 'speed',
+						label: labelSpeed,
 					}], {
 						xaxes: [ {}],
 						yaxes: [{}, {
@@ -320,7 +556,7 @@
 						tooltip: true,
 						tooltipOpts: {
 							content: function(flotItem, $tooltipEl) {
-									if(flotItem == "elevation")
+									if(flotItem == labelAltitude)
 										return "Altitude : %y m @ %x km"
 	
 									return "Speed : %y km/h @ %x km"
@@ -332,7 +568,7 @@
 
 								var indexArray = flotItem['dataIndex']
 
-								if(flotItem['series']['label'] == "speed") {
+								if(flotItem['series']['label'] == labelSpeed) {
 									indexArray = elevation.map(function(el){return el[0];}).indexOf(flotItem['datapoint'][0])
 								}
 
@@ -359,7 +595,8 @@
 			<div class="col-md-9" style="height: 100%;">
 				<div id="map-canvas" style="height: 80%;"></div>
 				<div id="graphAltitude" style="height: 20%;">
-					<div class="flot-chart" style="height: 100%;" >
+					<div style='height:0%; text-align: right;' id='linksGraph'></div>
+					<div class="flot-chart" id='container_graph'  style="height: 100%;" >
                                 		<div class="flot-chart-content" id="flot-line-chart-multi" style="height: 100%;" ></div>
                             		</div>
 				</div>
