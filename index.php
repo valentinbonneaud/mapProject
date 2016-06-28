@@ -97,9 +97,6 @@
 				{
 					// we print all the arrays of the gps positions and names
 					$trip = $trips[$i];
-					$trip->printItineraire();
-					$trip->getElevation();
-					$trip->getSpeed();
 					$trip->getAll();
 				}
 

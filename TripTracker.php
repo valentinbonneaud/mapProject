@@ -173,6 +173,8 @@ class TripTracker
 
 		echo "var all_".$this->getName()." = [ ";
 
+		$currentTime = 0;
+
 		$timeStart = $this->_points[0]->getDate();
 		$total = 0;
                 $arraySpeeds = array();
@@ -193,15 +195,16 @@ class TripTracker
 				} else {
 
 					$t = $this->_points[$i]->getDate() - $this->_points[$i-1]->getDate();
-					if($t > 0) {
+					$tTotal = $this->_points[$i]->getDate() - $timeStart;
+					if($t > 0 && $tTotal >= $currentTime) {
 						$s = round($d*1000.0/($t)*3.6, 2);
-
+						$currentTime = $tTotal;
 						// we compute the 4 items moving average to smooth the speed
 						if(sizeof($arraySpeeds) > 4) array_shift($arraySpeeds);
 
 						array_push($arraySpeeds, $s);
 
-						echo ",'time':".($this->_points[$i]->getDate() - $timeStart).", 'speed':".round($this->calculate_average($arraySpeeds), 2);
+						echo ",'time':".$currentTime.", 'speed':".round($this->calculate_average($arraySpeeds), 2);
 		                        }
 
 				}
