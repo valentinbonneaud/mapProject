@@ -171,7 +171,7 @@ class TripTracker
 
 	public function getAll() {
 
-		echo "var all_".$this->_nom." = [ ";
+		echo "var all_".$this->getName()." = [ ";
 
 		$timeStart = $this->_points[0]->getDate();
 		$total = 0;
@@ -180,7 +180,7 @@ class TripTracker
 		for($i=0;$i<$this->_nb;$i++) {
 			$d = $this->getDistanceBetween($i, false);
 
-			echo "{'distance':".round($total,3).", 'latitude':".$this->_points[$i]->getLat().", 'longitude':".$this->_points[$i]->getLon();
+			echo "{'distance':".round($total,3).", 'latitude':".$this->_points[$i]->getLat().", 'longitude':".$this->_points[$i]->getLon().", 'elevation':".$this->_points[$i]->getEle();
 
 			$total += $d;
 

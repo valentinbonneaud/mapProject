@@ -38,6 +38,7 @@
 			var labelAltitude = "Elevation [m]"
 
 
+
 			<?php
 
 				include_once 'TripTracker.php';
@@ -112,10 +113,7 @@
 
 
 			var trips = {};
-			var currentTrip, currentEle, currentSpeed, currentMap, currentTripData;
-			var markerOnMap = null
-			var hasSpeed = false, isTime = false
-
+			var currentTrip, currentEle, currentSpeed, currentMap;
 			$( document ).ready(function() {
 
 				<?php
@@ -182,15 +180,10 @@
 			})
 
 			function getHoverContent (flotItem, $tooltipEl) {
-
-				var xLabel = "km"
-
-				if(isTime) xLabel = "min"
-
 				if(flotItem == labelAltitude)
-					return "Altitude : %y m @ %x "+xLabel
+					return "Altitude : %y m @ %x km"
 
-				return "Speed : %y km/h @ %x "+xLabel
+				return "Speed : %y km/h @ %x km"
 			}
 
 			function setPositionFromGraph(flotItem, $tooltipEl) {
@@ -212,36 +205,14 @@
 
 				var data = []
 
-				if(hasSpeed) {	
-
-					var textSpeed = "Hide speed"
-					if(currentSpeed == null) textSpeed = "Show speed"
-					var textElevation = "Hide elevation"			
-					if(currentElevation == null) textElevation = "Show elevation"	
-					var textTime = "Time"
-					if(isTime) textTime = "Distance"
-
-					$("#linksGraph").css("height", "10%")
-					$("#linksGraph").html("<a style='padding-right: 6px;' id='linkSpeed' href=''>"+textSpeed+"</a><a style='padding-right: 6px;' id='linkEle' href=''>"+textElevation+"</a><a style='padding-right: 6px;' id='linkTime' href=''>"+textTime+"</a>")
-					$("#container_graph").css("height", "90%")
-
-					setLinkSpeed()
-					setLinkElevation()
-					setLinkTime()
-				} else {
-					$("#linksGraph").css("height", "0%")
-					$("#linksGraph").html("")
-					$("#container_graph").css("height", "100%")
-				}
-
-				if (currentSpeed == null || currentSpeed.length == 0) {					
+				if (currentSpeed == null) {
 
 					data = [{
 						data: currentElevation,
 						label: labelAltitude
 					}, ]
 
-				} else if (currentElevation == null || currentElevation.length == 0) {
+				} else if (currentElevation == null) {
 
 					data = [{
 						data: currentSpeed,
@@ -320,11 +291,11 @@
 
 					if ($(this).html() == "Time") {
 						$(this).html("Distance")						
-						getData(currentTripData, "time")
+						getData(trip, "time")
 						plotGraph(currentEle, currentSpeed)
 					} else {
 						$(this).html("Time")
-						getData(currentTripData, "distance")
+						getData(trip, "distance")
 						plotGraph(currentEle, currentSpeed)
 					}
 
@@ -358,9 +329,7 @@
 				};
 				currentMap = new google.maps.Map(document.getElementById("map-canvas"), mapOptions);
 
-				currentTripData = trip
-
-				getData(currentTripData, "distance")
+				getData(trip, "distance")
 
 				traceTracker(currentTrip, currentEle, currentSpeed, currentMap);
 				plotGraph(currentEle, currentSpeed)
@@ -399,8 +368,8 @@
 
 					google.maps.event.addListener( marker, 'click', function(e) {
 						$(".panelRando").addClass("hidden")
-							$("#"+value.idRando+"_div").removeClass("hidden")
-							initializeRando(window[value.idRando], window["elevation_"+value.idRando], window["speed_"+value.idRando])
+											$("#"+value.idRando+"_div").removeClass("hidden")
+											initializeRando(window[value.idRando], window["elevation_"+value.idRando], window["speed_"+value.idRando])
 						});
 				   
 					marker.setMap(map);
@@ -410,6 +379,122 @@
 	
 				map.fitBounds(bounds);
 				map.panToBounds(bounds);
+			}
+
+			var markerOnMap = null
+
+			function createPlotGraph(flightPlanCoordinates, elevation, speed, map) {
+
+				if (speed == undefined) {
+
+					$("#linksGraph").css("height", "10%")
+					$("#linksGraph").html("<a style='padding-right: 6px;' id='linkTime' href=''>Time</a>")
+					$("#container_graph").css("height", "90%")
+
+					$.plot($("#flot-line-chart-multi"), [{
+						data: elevation,
+						label: labelElevation
+					}, ], {
+						xaxes: [{}],
+						yaxes: [{}, {
+							// align if we are to the right
+							alignTicksWithAxis: 1,
+							position: "right",
+							tickFormatter: euroFormatter
+						}],
+						legend: {
+							position: 'sw'
+						},
+						colors: ["#1ab394"],
+						grid: {
+							color: "#999999",
+							hoverable: true,
+							clickable: true,
+							tickColor: "#D4D4D4",
+							borderWidth: 0,
+							hoverable: true //IMPORTANT! this is needed for tooltip to work,
+						},
+						tooltip: true,
+						tooltipOpts: {
+							content: "Altitude : %y m @ %x km",
+							//xDateFormat: "%y-%0m-%0d",
+
+							onHover: function (flotItem, $tooltipEl) {
+								if (markerOnMap != null) markerOnMap.setMap(null)
+								markerOnMap = new google.maps.Marker({
+									position: flightPlanCoordinates[flotItem['dataIndex']],
+									map: map
+								});
+							}
+						}
+					});
+
+				} else {
+
+					$("#linksGraph").css("height", "10%")
+					$("#linksGraph").html("<a style='padding-right: 6px;' id='linkSpeed' href=''>Hide speed</a><a style='padding-right: 6px;' id='linkEle' href=''>Hide elevation</a><a style='padding-right: 6px;' id='linkTime' href=''>Time</a>")
+					$("#container_graph").css("height", "90%")
+
+					setLinkSpeed()
+					setLinkElevation()
+					setLinkTime()
+
+					$.plot($("#flot-line-chart-multi"), [{
+						data: elevation,
+						label: labelAltitude,
+					},
+					{
+						data: speed,
+						yaxis: 2,
+						label: labelSpeed,
+					}], {
+						xaxes: [{}],
+						yaxes: [{}, {
+							// align if we are to the right
+							alignTicksWithAxis: 1,
+							position: "right",
+						}],
+						legend: {
+							position: 'sw'
+						},
+						colors: ["#1ab394"],
+						grid: {
+							color: "#999999",
+							hoverable: true,
+							clickable: true,
+							tickColor: "#D4D4D4",
+							borderWidth: 0,
+							hoverable: true //IMPORTANT! this is needed for tooltip to work,
+						},
+						tooltip: true,
+						tooltipOpts: {
+							content: function (flotItem, $tooltipEl) {
+								if (flotItem == labelAltitude)
+									return "Altitude : %y m @ %x km"
+
+								return "Speed : %y km/h @ %x km"
+							},
+							//xDateFormat: "%y-%0m-%0d",
+
+							onHover: function (flotItem, $tooltipEl) {
+								if (markerOnMap != null) markerOnMap.setMap(null)
+
+								var indexArray = flotItem['dataIndex']
+
+								if (flotItem['series']['label'] == labelSpeed) {
+									indexArray = elevation.map(function (el) { return el[0]; }).indexOf(flotItem['datapoint'][0])
+								}
+
+								markerOnMap = new google.maps.Marker({
+									position: flightPlanCoordinates[indexArray],
+									map: map
+								});
+							}
+						}
+					});
+
+				}
+
 			}
 
 			function traceTracker(flightPlanCoordinates, elevation, speed, map) 
@@ -435,9 +520,6 @@
 				currentEle = []
 				currentSpeed = []
 
-				isTime = true
-				if (type == "distance") isTime = false;
-
 				$.map(data, function (e, k) {
 
 					currentTrip[currentTrip.length] = new google.maps.LatLng(e.latitude, e.longitude)
@@ -446,12 +528,10 @@
 						currentEle[currentEle.length] = [e.distance, e.elevation];
 						if (e.speed != undefined) currentSpeed[currentSpeed.length] = [e.distance, e.speed];
 					} else if (type == "time") {
-						currentEle[currentEle.length] = [e.time/60.0, e.elevation];
-						if (e.speed != undefined) currentSpeed[currentSpeed.length] = [e.time/60.0, e.speed];
+						currentEle[currentEle.length] = [e.time, e.elevation];
+						if (e.speed != undefined) currentSpeed[currentSpeed.length] = [e.time, e.speed];
 					}
 				})
-
-				hasSpeed = currentSpeed.length != 0
 			}
 			
 		</script>
@@ -468,8 +548,8 @@
 				<div id="graphAltitude" style="height: 20%;">
 					<div style='height:0%; text-align: right;' id='linksGraph'></div>
 					<div class="flot-chart" id='container_graph'  style="height: 100%;" >
-						<div class="flot-chart-content" id="flot-line-chart-multi" style="height: 100%;" ></div>
-					</div>
+										<div class="flot-chart-content" id="flot-line-chart-multi" style="height: 100%;" ></div>
+									</div>
 				</div>
 			</div>
 		</div>
